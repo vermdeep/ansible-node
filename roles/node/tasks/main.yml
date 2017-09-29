@@ -1,0 +1,49 @@
+---
+  - name: "Check if os is debian"
+    fail: msg="Target system is not debian."
+    when: ansible_distribution=="debian"
+  
+  - name: "Clean node folder"
+    file:
+      state: "absent"
+      path: "{{ item.name }}"
+    with_items:
+      - { name: "/opt/node" }
+      - { name: "/usr/bin/npm" }
+      - { name: "/usr/bin/node" }
+
+  - name: "Download node archive"
+    get_url:
+      url: "https://nodejs.org/dist/v{{node_version}}/node-v{{node_version}}-linux-x64.tar.gz"
+      dest: "/tmp/node.tar.gz"
+
+  - name: "Unarchive the node archive on the server"
+    unarchive:
+      remote_src: "yes"
+      src: "/tmp/node.tar.gz"
+      dest: "/opt"
+      owner: "{{ node_owner }}"
+      group: "{{ node_user_group }}"
+      mode: "{{ node_file_mode }}"
+
+  - name: "Remove the node.tar.gz"
+    file:
+      state: "absent"
+      path: "/tmp/node.tar.gz"
+  
+  - name: "Rename node-v.x.xx.x-linux-x64 directory to node"      
+    command: "mv /opt/node-v{{node_version}}-linux-x64 /opt/node"
+
+  - name: "Create a symlink for node and npm in /usr/bin"
+    file: 
+        src: "/opt/node/bin/{{item.name}}"
+        dest: "/usr/bin/{{item.name}}"
+        owner: "{{ node_owner }}"
+        group: "{{ node_user_group }}"
+        state: "link"
+        mode: "{{ node_file_mode }}"
+    with_items:
+        - { name: "npm" }
+        - { name: "node" }
+ 
+    
